@@ -1,0 +1,30 @@
+raw_image_topic: "/left_camera/image"
+world_points_topic: "/cloud_registered"
+imu_pose_topic: "/fastlivo2/vio_imu_pose"
+
+output_image_topic: "/image_for_gs"
+output_depth_topic: "/depth_for_gs"
+output_pose_topic: "/pose_for_gs"
+output_points_topic: "/points_for_gs"
+
+world_frame_id: "map"
+image_frame_id: "image_frame"
+camera_time_offset_sec: 0.1
+sync_tolerance_sec: 0.02
+
+width: 640
+height: 512
+fx: 646.78472
+fy: 646.65775
+cx: 313.456795
+cy: 261.399612
+
+lidar_to_imu_translation: [0.04165, 0.02326, -0.0284]
+lidar_to_imu_rotation: [1, 0, 0,
+                        0, 1, 0,
+                        0, 0, 1]
+
+lidar_to_camera_translation: [0.0673699, 0.0412418, 0.0764217]
+lidar_to_camera_rotation: [0.00610193, -0.00615449, 0.999962,
+                           -0.999863, 0.0153796, 0.00619598,
+                           -0.0154172, -0.999863, -0.0060598]

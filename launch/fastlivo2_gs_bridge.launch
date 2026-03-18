@@ -1,0 +1,10 @@
+<launch>
+  <arg name="config_file" default="$(find gaussian_lic)/config/fastlivo2_gs_bridge.yaml" />
+
+  <node pkg="gaussian_lic"
+        type="fastlivo2_gs_bridge_node"
+        name="fastlivo2_gs_bridge"
+        output="screen">
+    <rosparam command="load" file="$(arg config_file)" />
+  </node>
+</launch>

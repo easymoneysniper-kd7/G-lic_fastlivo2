@@ -148,3 +148,9 @@ if(GAUSSIAN_LIC_ENABLE_DEPTH_COMPLETER)
                         ${TENSORRT_NVINFER_LIB}
                         ${TENSORRT_PLUGIN_LIB})
 endif()
+
+add_executable(fastlivo2_gs_bridge_node ${PROJECT_SOURCE_DIR}/src/fastlivo2_gs_bridge.cpp)
+target_link_libraries(fastlivo2_gs_bridge_node
+                      ${catkin_LIBRARIES}
+                      ${OpenCV_LIBS}
+                      ${PCL_LIBRARIES})
