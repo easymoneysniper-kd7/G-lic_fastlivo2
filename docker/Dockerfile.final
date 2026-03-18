@@ -1,0 +1,24 @@
+ARG BASE_IMAGE=gaussian-lic:libtorch
+FROM ${BASE_IMAGE}
+
+SHELL ["/bin/bash", "-lc"]
+
+COPY docker/scripts /opt/gaussian-lic-docker/scripts
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglm-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple "cmake>=3.28,<3.32"
+
+COPY . /opt/gaussian-lic-src
+
+RUN /opt/gaussian-lic-docker/scripts/build_workspace.sh
+
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc \
+ && echo "if [ -f ${CATKIN_WS}/devel/setup.bash ]; then source ${CATKIN_WS}/devel/setup.bash; fi" >> /etc/bash.bashrc
+
+WORKDIR ${CATKIN_WS}
+
+ENTRYPOINT ["/opt/gaussian-lic-docker/scripts/entrypoint.sh"]
+CMD ["bash"]

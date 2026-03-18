@@ -1,0 +1,31 @@
+ARG BASE_IMAGE=gaussian-lic:opencv
+FROM ${BASE_IMAGE}
+
+ARG LIBTORCH_URL=https://download.pytorch.org/libtorch/cu128/libtorch-cxx11-abi-shared-with-deps-2.7.1%2Bcu128.zip
+
+ENV LIBTORCH_ROOT=/opt/libtorch
+
+SHELL ["/bin/bash", "-lc"]
+
+RUN rm -rf "${LIBTORCH_ROOT}" \
+ && for attempt in 1 2 3; do \
+      rm -f /tmp/libtorch.zip; \
+      wget -q --tries=5 --timeout=30 --waitretry=5 "${LIBTORCH_URL}" -O /tmp/libtorch.zip; \
+      rm -rf "${LIBTORCH_ROOT}"; \
+      (unzip -qo /tmp/libtorch.zip -d /opt || true); \
+      if [[ -f "${LIBTORCH_ROOT}/share/cmake/Torch/TorchConfig.cmake" \
+         && -f "${LIBTORCH_ROOT}/lib/libtorch.so" \
+         && -f "${LIBTORCH_ROOT}/lib/libc10.so" ]]; then \
+        break; \
+      fi; \
+      if [[ "${attempt}" -eq 3 ]]; then \
+        echo "Failed to provision LibTorch from ${LIBTORCH_URL}" >&2; \
+        exit 1; \
+      fi; \
+      sleep 5; \
+    done \
+ && rm -f /tmp/libtorch.zip
+
+ENV Torch_DIR=${LIBTORCH_ROOT}/share/cmake/Torch \
+    CMAKE_PREFIX_PATH=${LIBTORCH_ROOT} \
+    LD_LIBRARY_PATH=${LIBTORCH_ROOT}/lib

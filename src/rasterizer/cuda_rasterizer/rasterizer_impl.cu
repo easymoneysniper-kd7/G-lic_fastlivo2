@@ -20,6 +20,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <cfloat>
 #include <numeric>
 #include <cuda.h>
 #include "cuda_runtime.h"

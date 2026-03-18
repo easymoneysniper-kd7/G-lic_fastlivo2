@@ -58,7 +58,6 @@ public:
         setWorldViewTransform();
         setProjectionMatrix();
         full_proj_transform_ = (world_view_transform_.unsqueeze(0).bmm(projection_matrix_.unsqueeze(0))).squeeze(0);
-        camera_center_ = world_view_transform_.inverse().index({3, torch::indexing::Slice(0, 3)});
 
         limx_neg_ = - 0.15 * image_width_ / fx_ - cx_ / fx_;
         limx_pos_ = 1.15 * image_width_ / fx_ - cx_ / fx_;
@@ -84,6 +83,9 @@ public:
         Rt = C2W.inverse();  // Tcw
 
         world_view_transform_ = tensor_utils::EigenMatrix2TorchTensor(Rt, torch::kCUDA).transpose(0, 1);
+        camera_center_ = torch::tensor(
+            {cam_center.x(), cam_center.y(), cam_center.z()},
+            torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCUDA));
     }
 
     void setProjectionMatrix()

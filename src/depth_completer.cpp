@@ -99,19 +99,77 @@ std::vector<char> DepthCompleter::readFile(const std::string& filename)
 
 void DepthCompleter::allocateBuffers() 
 {
-    const int numBindings = mEngine->getNbBindings();
-    mDeviceBuffers.resize(numBindings, nullptr);
-    mHostBuffers.resize(numBindings);
-    
-    for (int i = 0; i < numBindings; i++) 
+    auto setInputShape = [this](char const* tensorName, int channels)
     {
-        nvinfer1::Dims dims = mEngine->getBindingDimensions(i);
+        nvinfer1::Dims dims{};
+        dims.nbDims = 4;
+        dims.d[0] = 1;
+        dims.d[1] = channels;
+        dims.d[2] = mInputHeight;
+        dims.d[3] = mInputWidth;
+        if (!mContext->setInputShape(tensorName, dims))
+        {
+            throw std::runtime_error(std::string("Failed to set TensorRT input shape for tensor: ") + tensorName);
+        }
+    };
+
+    setInputShape("rgb", 3);
+    setInputShape("depth", 1);
+    setInputShape("mask", 1);
+
+    const int numTensors = mEngine->getNbIOTensors();
+    mTensorNames.resize(numTensors);
+    mDeviceBuffers.resize(numTensors, nullptr);
+    mHostBuffers.resize(numTensors);
+
+    for (int i = 0; i < numTensors; i++) 
+    {
+        char const* tensorName = mEngine->getIOTensorName(i);
+        if (tensorName == nullptr)
+        {
+            throw std::runtime_error("Encountered unnamed TensorRT IO tensor");
+        }
+        mTensorNames[i] = tensorName;
+
+        if (mTensorNames[i] == "rgb") mRgbTensorIndex = i;
+        else if (mTensorNames[i] == "depth") mDepthTensorIndex = i;
+        else if (mTensorNames[i] == "mask") mMaskTensorIndex = i;
+        else if (mTensorNames[i] == "pred") mOutputTensorIndex = i;
+
+        nvinfer1::Dims dims = mContext->getTensorShape(tensorName);
+        bool has_dynamic_dim = false;
+        for (int dim = 0; dim < dims.nbDims; ++dim)
+        {
+            if (dims.d[dim] < 0)
+            {
+                has_dynamic_dim = true;
+                break;
+            }
+        }
+        if (has_dynamic_dim && mTensorNames[i] == "pred")
+        {
+            dims.nbDims = 4;
+            dims.d[0] = 1;
+            dims.d[1] = 1;
+            dims.d[2] = mInputHeight;
+            dims.d[3] = mInputWidth;
+        }
+
         size_t elementCount = volume(dims);
+        if (elementCount == 0)
+        {
+            throw std::runtime_error(std::string("TensorRT tensor has invalid shape: ") + tensorName);
+        }
         mHostBuffers[i].resize(elementCount);
         if (cudaMalloc(&mDeviceBuffers[i], elementCount * sizeof(float)) != cudaSuccess) 
         {
             throw std::runtime_error("CUDA memory allocation failed");
         }
+    }
+
+    if (mRgbTensorIndex < 0 || mDepthTensorIndex < 0 || mMaskTensorIndex < 0 || mOutputTensorIndex < 0)
+    {
+        throw std::runtime_error("Failed to locate expected TensorRT IO tensors: rgb/depth/mask/pred");
     }
 }
 
@@ -129,24 +187,24 @@ void DepthCompleter::prepareInputs(const cv::Mat& rgbImage, const cv::Mat& depth
     cv::split(rgbImage, rgbChannels);
     for (int c = 0; c < 3; c++) 
     {
-        std::memcpy(mHostBuffers[0].data() + c * mInputHeight * mInputWidth,
+        std::memcpy(mHostBuffers[mRgbTensorIndex].data() + c * mInputHeight * mInputWidth,
                     rgbChannels[c].data,
                     mInputHeight * mInputWidth * sizeof(float));
     }
 
     // Depth
-    std::memcpy(mHostBuffers[1].data(), depthImage.data, mInputHeight * mInputWidth * sizeof(float));
+    std::memcpy(mHostBuffers[mDepthTensorIndex].data(), depthImage.data, mInputHeight * mInputWidth * sizeof(float));
 
     // Mask
     cv::Mat mask = depthImage > 0;  // CV_8U  0｜255
     mask.convertTo(mask, CV_32F, 1.0/255.0);
-    std::memcpy(mHostBuffers[2].data(), mask.data, mInputHeight * mInputWidth * sizeof(float));
+    std::memcpy(mHostBuffers[mMaskTensorIndex].data(), mask.data, mInputHeight * mInputWidth * sizeof(float));
 
     // Copy to device
-    for (size_t i = 0; i < mDeviceBuffers.size() - 1; i++) 
+    for (int idx : {mRgbTensorIndex, mDepthTensorIndex, mMaskTensorIndex}) 
     {
-        if (cudaMemcpy(mDeviceBuffers[i], mHostBuffers[i].data(), 
-                       mHostBuffers[i].size() * sizeof(float),
+        if (cudaMemcpy(mDeviceBuffers[idx], mHostBuffers[idx].data(), 
+                       mHostBuffers[idx].size() * sizeof(float),
                        cudaMemcpyHostToDevice) != cudaSuccess) 
         {
             throw std::runtime_error("CUDA memcpy failed");
@@ -156,14 +214,14 @@ void DepthCompleter::prepareInputs(const cv::Mat& rgbImage, const cv::Mat& depth
 
 cv::Mat DepthCompleter::processOutput() 
 {
-    if (cudaMemcpy(mHostBuffers.back().data(), mDeviceBuffers.back(),
-                   mHostBuffers.back().size() * sizeof(float),
+    if (cudaMemcpy(mHostBuffers[mOutputTensorIndex].data(), mDeviceBuffers[mOutputTensorIndex],
+                   mHostBuffers[mOutputTensorIndex].size() * sizeof(float),
                    cudaMemcpyDeviceToHost) != cudaSuccess) 
     {
         throw std::runtime_error("CUDA memcpy failed");
     }
     
-    cv::Mat result(mInputHeight, mInputWidth, CV_32F, mHostBuffers.back().data());
+    cv::Mat result(mInputHeight, mInputWidth, CV_32F, mHostBuffers[mOutputTensorIndex].data());
 
     return result * 200.0f;
 }

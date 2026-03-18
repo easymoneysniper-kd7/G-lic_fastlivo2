@@ -26,6 +26,7 @@
 #include <cmath>
 #include <unordered_map>
 #include <chrono>
+#include <iostream>
 
 #include <torch/torch.h>
 #include <c10/cuda/CUDACachingAllocator.h>
@@ -43,7 +44,11 @@
 #include "simple-knn/spatial.h"
 #include "rasterizer/renderer.h"
 
+#if GAUSSIAN_LIC_ENABLE_DEPTH_COMPLETER
 #include "depth_completer.h"
+#else
+class DepthCompleter {};
+#endif
 
 const double C0 = 0.28209479177387814;
 inline double RGB2SH(double color) {return (color - 0.5) / C0;}
@@ -57,8 +62,21 @@ public:
         select_every_k_frame_(prm.select_every_k_frame),
         depth_completion_(prm.depth_completion),
         patch_size_(prm.patch_size), max_depth_(prm.max_depth),
-        all_frame_num_(0), is_keyframe_current_(false),
-        depth_completer_(prm.engine_path, prm.width, prm.height) {}
+        all_frame_num_(0), is_keyframe_current_(false)
+    {
+#if GAUSSIAN_LIC_ENABLE_DEPTH_COMPLETER
+        if (depth_completion_)
+        {
+            depth_completer_ = std::make_unique<DepthCompleter>(prm.engine_path, prm.width, prm.height);
+        }
+#else
+        if (depth_completion_)
+        {
+            depth_completion_ = false;
+            std::cerr << "[Gaussian-LIC] Depth completion disabled at build time; continuing without TensorRT depth completion." << std::endl;
+        }
+#endif
+    }
         
     void addFrame(Frame& cur_frame);
 
@@ -87,7 +105,7 @@ public:
     std::vector<std::shared_ptr<Camera>> train_cameras_;
     std::vector<std::shared_ptr<Camera>> test_cameras_;
 
-    DepthCompleter depth_completer_;
+    std::unique_ptr<DepthCompleter> depth_completer_;
 };
 
 

@@ -1,0 +1,9 @@
+ARG BASE_IMAGE=gaussian-lic:base
+FROM ${BASE_IMAGE}
+
+ARG OPENCV_VERSION=4.7.0
+
+COPY docker/scripts /opt/gaussian-lic-docker/scripts
+
+RUN chmod +x /opt/gaussian-lic-docker/scripts/*.sh \
+ && /opt/gaussian-lic-docker/scripts/install_opencv.sh "${OPENCV_VERSION}"

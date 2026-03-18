@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 #include <memory>
 #include <opencv2/opencv.hpp>
@@ -57,7 +58,12 @@ private:
     std::unique_ptr<nvinfer1::IRuntime, InferDeleter> mRuntime;
     std::unique_ptr<nvinfer1::ICudaEngine, InferDeleter> mEngine;
     std::unique_ptr<nvinfer1::IExecutionContext, InferDeleter> mContext;
+    std::vector<std::string> mTensorNames;
     std::vector<void*> mDeviceBuffers;
     std::vector<std::vector<float>> mHostBuffers;
+    int mRgbTensorIndex{-1};
+    int mDepthTensorIndex{-1};
+    int mMaskTensorIndex{-1};
+    int mOutputTensorIndex{-1};
     int mInputWidth, mInputHeight;
 };

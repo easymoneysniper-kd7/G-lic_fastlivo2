@@ -1,0 +1,11 @@
+.git
+**/.git
+result
+build
+devel
+install
+__pycache__
+*.pyc
+*.pyo
+*.swp
+docker/assets

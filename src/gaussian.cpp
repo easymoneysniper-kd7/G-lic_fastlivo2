@@ -20,10 +20,6 @@
 #include "tensor_utils.h"
 #include "loss_utils.h"
 
-#include <tf/tf.h>
-#include <tf/transform_broadcaster.h>
-#include <tf_conversions/tf_eigen.h>
-
 #include <sstream>
 #include <iomanip>
 #include <random>
@@ -33,6 +29,7 @@
 #include <algorithm>
 #include <chrono>
 #include <limits>
+#include <fstream>
 #include <torch/script.h>
 #include <memory>
 
@@ -119,10 +116,11 @@ void Dataset::addFrame(Frame& cur_frame)
     cv::Mat depth_map = dp_ptr->image;  // metric float32
 
     /// pose
-    Eigen::Quaterniond q_wc;
-    Eigen::Vector3d t_wc;
-    tf::quaternionMsgToEigen(cur_frame.pose_msg->pose.orientation, q_wc);
-    tf::pointMsgToEigen(cur_frame.pose_msg->pose.position, t_wc);
+    const auto& orientation = cur_frame.pose_msg->pose.orientation;
+    const auto& position = cur_frame.pose_msg->pose.position;
+    Eigen::Quaterniond q_wc(orientation.w, orientation.x, orientation.y, orientation.z);
+    q_wc.normalize();
+    Eigen::Vector3d t_wc(position.x, position.y, position.z);
     R_wc_.push_back(q_wc.toRotationMatrix());
     t_wc_.push_back(t_wc);
 
@@ -149,8 +147,9 @@ void Dataset::addFrame(Frame& cur_frame)
 
         if (depth_completion_)
         {
+#if GAUSSIAN_LIC_ENABLE_DEPTH_COMPLETER
             cv::Mat completed_depth;  // metric float32
-            completed_depth = depth_completer_.complete(image_rgb, depth_map);
+            completed_depth = depth_completer_->complete(image_rgb, depth_map);
 
             cv::Mat mask_known = depth_map > 0;  // 0/255 uint8
             cv::Mat completed_depth_known;
@@ -199,6 +198,7 @@ void Dataset::addFrame(Frame& cur_frame)
             {
                 // std::cout << "[bef vs aft diff]: " << mean_depth_difference << " m" << std::endl;
             }
+#endif
         }
 
         cam->original_image_ = tensor_utils::cvMat2TorchTensor_Float32(image_rgb, torch::kCPU, true);
@@ -882,8 +882,11 @@ void evaluateVisualQuality(const std::shared_ptr<Dataset>& dataset,
     std::cout << "\n     🎉 Evaluate Visual Quality 🎉\n";
     std::cout << "\n        [Number of Final Gaussians] " << pc->getXYZ().size(0) << std::endl;
 
-    if (fs::exists(result_path)) fs::remove_all(result_path);
     fs::create_directories(result_path);
+    for (const auto& entry : fs::directory_iterator(result_path))
+    {
+        fs::remove_all(entry.path());
+    }
 
     std::string render_dir_path = result_path + "/render";
     fs::create_directories(render_dir_path);
@@ -906,6 +909,9 @@ void evaluateVisualQuality(const std::shared_ptr<Dataset>& dataset,
         std::cerr << "lpips model loading failed: " << e.what() << std::endl;
     }
 
+    double training_psnr = 0;
+    double training_ssim = 0;
+    double training_lpips = 0;
     {
         double psnrs = 0;
         double ssims = 0;
@@ -948,13 +954,16 @@ void evaluateVisualQuality(const std::shared_ptr<Dataset>& dataset,
             cv::applyColorMap(c_img, c_img, cv::COLORMAP_JET);
             cv::imwrite(render_depth_dir_path + "/" + train_camera->image_name_, c_img);
         }
-        psnrs /= dataset->train_cameras_.size();
-        ssims /= dataset->train_cameras_.size();
-        lpipss /= dataset->train_cameras_.size();
-        std::cout << std::fixed << std::setprecision(2) << "        [Training View PSNR] " << psnrs << std::endl;
-        std::cout << std::fixed << std::setprecision(3) << "        [Training View SSIM] " << ssims << std::endl;
-        std::cout << std::fixed << std::setprecision(3) << "        [Training View LPIPS] " << lpipss << std::endl;
+        training_psnr = psnrs / dataset->train_cameras_.size();
+        training_ssim = ssims / dataset->train_cameras_.size();
+        training_lpips = lpipss / dataset->train_cameras_.size();
+        std::cout << std::fixed << std::setprecision(2) << "        [Training View PSNR] " << training_psnr << std::endl;
+        std::cout << std::fixed << std::setprecision(3) << "        [Training View SSIM] " << training_ssim << std::endl;
+        std::cout << std::fixed << std::setprecision(3) << "        [Training View LPIPS] " << training_lpips << std::endl;
     }
+    double novel_view_psnr = 0;
+    double novel_view_ssim = 0;
+    double novel_view_lpips = 0;
     {
         double psnrs = 0;
         double ssims = 0;
@@ -997,11 +1006,20 @@ void evaluateVisualQuality(const std::shared_ptr<Dataset>& dataset,
             cv::applyColorMap(c_img, c_img, cv::COLORMAP_JET);
             cv::imwrite(render_depth_dir_path + "/" + test_camera->image_name_, c_img);
         }
-        psnrs /= dataset->test_cameras_.size();
-        ssims /= dataset->test_cameras_.size();
-        lpipss /= dataset->test_cameras_.size();
-        std::cout << std::fixed << std::setprecision(2) << "        [In-Sequence Novel View PSNR] " << psnrs << std::endl;
-        std::cout << std::fixed << std::setprecision(3) << "        [In-Sequence Novel View SSIM] " << ssims << std::endl;
-        std::cout << std::fixed << std::setprecision(3) << "        [In-Sequence Novel View LPIPS] " << lpipss << std::endl;
+        novel_view_psnr = psnrs / dataset->test_cameras_.size();
+        novel_view_ssim = ssims / dataset->test_cameras_.size();
+        novel_view_lpips = lpipss / dataset->test_cameras_.size();
+        std::cout << std::fixed << std::setprecision(2) << "        [In-Sequence Novel View PSNR] " << novel_view_psnr << std::endl;
+        std::cout << std::fixed << std::setprecision(3) << "        [In-Sequence Novel View SSIM] " << novel_view_ssim << std::endl;
+        std::cout << std::fixed << std::setprecision(3) << "        [In-Sequence Novel View LPIPS] " << novel_view_lpips << std::endl;
     }
+
+    std::ofstream metrics_file(result_path + "/metrics.txt");
+    metrics_file << std::fixed;
+    metrics_file << "training_view_psnr=" << std::setprecision(6) << training_psnr << "\n";
+    metrics_file << "training_view_ssim=" << std::setprecision(6) << training_ssim << "\n";
+    metrics_file << "training_view_lpips=" << std::setprecision(6) << training_lpips << "\n";
+    metrics_file << "in_sequence_novel_view_psnr=" << std::setprecision(6) << novel_view_psnr << "\n";
+    metrics_file << "in_sequence_novel_view_ssim=" << std::setprecision(6) << novel_view_ssim << "\n";
+    metrics_file << "in_sequence_novel_view_lpips=" << std::setprecision(6) << novel_view_lpips << "\n";
 }
