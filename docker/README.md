@@ -19,6 +19,24 @@ cd /home/cw/project/yjh_workspace/G-lic
 ./docker/build.sh
 ```
 
+Run the FAST-LIVO2 frontend + bridge + Gaussian-LIC backend with one command:
+
+```bash
+cd /home/cw/project/yjh_workspace/G-lic
+./docker/run_fastlivo2_compose.sh
+```
+
+The default bag is `/home/cw/project/yjh_workspace/data/CBD_Building_01.bag`.
+You can override it with:
+
+```bash
+BAG_PATH=/home/cw/project/yjh_workspace/data/CBD_Building_01.bag ./docker/run_fastlivo2_compose.sh
+```
+
+The script uses `docker compose`, saves per-service logs into the per-run result
+folder, writes a timing summary to `timing_summary.txt`, and tears the stack
+down after the run finishes.
+
 Run an interactive container:
 
 ```bash

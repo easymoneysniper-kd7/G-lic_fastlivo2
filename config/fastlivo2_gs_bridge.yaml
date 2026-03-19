@@ -1,6 +1,6 @@
 raw_image_topic: "/left_camera/image"
 world_points_topic: "/cloud_registered"
-imu_pose_topic: "/fastlivo2/vio_imu_pose"
+imu_pose_topic: "/fastlivo2/vio_camera_pose"
 
 output_image_topic: "/image_for_gs"
 output_depth_topic: "/depth_for_gs"
@@ -10,7 +10,7 @@ output_points_topic: "/points_for_gs"
 world_frame_id: "map"
 image_frame_id: "image_frame"
 camera_time_offset_sec: 0.1
-sync_tolerance_sec: 0.02
+sync_tolerance_sec: 0.15
 
 width: 640
 height: 512

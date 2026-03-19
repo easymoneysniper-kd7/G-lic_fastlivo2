@@ -1,0 +1,99 @@
+services:
+  roscore:
+    image: gaussian-lic:cuda128
+    working_dir: /workspace
+    ipc: host
+    volumes:
+      - /home/cw/project/yjh_workspace:/workspace
+    command:
+      - bash
+      - -lc
+      - |
+        source /opt/ros/noetic/setup.bash
+        export ROS_MASTER_URI=http://127.0.0.1:11311
+        export ROS_HOSTNAME=127.0.0.1
+        exec roscore
+
+  frontend:
+    image: gaussian-lic:cuda128
+    depends_on:
+      - roscore
+    working_dir: /workspace
+    ipc: host
+    network_mode: service:roscore
+    volumes:
+      - /home/cw/project/yjh_workspace:/workspace
+    command:
+      - bash
+      - -lc
+      - |
+        source /opt/ros/noetic/setup.bash
+        source /workspace/.fastlivo2_frontend_ws/devel/setup.bash
+        export ROS_MASTER_URI=http://127.0.0.1:11311
+        export ROS_HOSTNAME=127.0.0.1
+        exec roslaunch fast_livo mapping_avia.launch \
+          rviz:=false \
+          republish_compressed:=false \
+          avia_config:=${FRONTEND_AVIA_CONFIG:-/workspace/.fastlivo2_frontend_ws/src/fast_livo/config/avia.yaml} \
+          camera_config:=${FRONTEND_CAMERA_CONFIG:-/workspace/.fastlivo2_frontend_ws/src/fast_livo/config/camera_pinhole.yaml}
+
+  bridge:
+    image: gaussian-lic:cuda128
+    depends_on:
+      - frontend
+    working_dir: /workspace
+    ipc: host
+    network_mode: service:roscore
+    volumes:
+      - /home/cw/project/yjh_workspace:/workspace
+    command:
+      - bash
+      - -lc
+      - |
+        source /opt/ros/noetic/setup.bash
+        source /workspace/.fastlivo2_frontend_ws/devel/setup.bash
+        export ROS_MASTER_URI=http://127.0.0.1:11311
+        export ROS_HOSTNAME=127.0.0.1
+        exec roslaunch fastlivo2_gs_bridge bridge.launch \
+          config_file:=${BRIDGE_CONFIG_FILE:-/workspace/.fastlivo2_frontend_ws/src/fastlivo2_gs_bridge/config/bridge.yaml}
+
+  backend:
+    image: gaussian-lic:cuda128
+    depends_on:
+      - bridge
+    working_dir: /workspace
+    ipc: host
+    network_mode: service:roscore
+    gpus: all
+    volumes:
+      - /home/cw/project/yjh_workspace:/workspace
+    command:
+      - bash
+      - -lc
+      - |
+        source /opt/ros/noetic/setup.bash
+        source /workspace/.fastlivo2_ws/devel/setup.bash
+        export ROS_MASTER_URI=http://127.0.0.1:11311
+        export ROS_HOSTNAME=127.0.0.1
+        exec roslaunch gaussian_lic fastlivo2.launch \
+          config_path:=${GS_CONFIG_PATH:-config/fastlivo2.yaml} \
+          result_path:=/workspace/G-lic/result/${RUN_NAME}
+
+  bag_player:
+    image: gaussian-lic:cuda128
+    profiles: ["runner"]
+    depends_on:
+      - backend
+    working_dir: /workspace
+    ipc: host
+    network_mode: service:roscore
+    volumes:
+      - /home/cw/project/yjh_workspace:/workspace
+    command:
+      - bash
+      - -lc
+      - |
+        source /opt/ros/noetic/setup.bash
+        export ROS_MASTER_URI=http://127.0.0.1:11311
+        export ROS_HOSTNAME=127.0.0.1
+        exec rosbag play ${BAG_PATH} -r ${PLAY_RATE:-1}

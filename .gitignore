@@ -17,6 +17,9 @@ simple_knn.egg-info/
 result/
 .deps/
 ckpt/.spnet-venv/
+data/
+*.bag
+.runtime_configs/
 
 *.pth
 *.onnx
