@@ -1,6 +1,7 @@
 .git
 **/.git
 result
+data
 build
 devel
 install
