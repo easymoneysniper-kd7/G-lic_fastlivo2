@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 WORKSPACE_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
 COMPOSE_FILE="${SCRIPT_DIR}/compose.fastlivo2.yml"
 PROJECT_NAME="${PROJECT_NAME:-gaussian-lic-fastlivo2}"
-DEFAULT_BAG="${WORKSPACE_ROOT}/data/CBD_Building_01.bag"
+DEFAULT_BAG="${REPO_ROOT}/data/fast-livo2_datasets/CBD_Building_01.bag"
 BAG_PATH="${BAG_PATH:-${1:-${DEFAULT_BAG}}}"
 PLAY_RATE="${PLAY_RATE:-1}"
 RUN_NAME="${RUN_NAME:-$(date +%Y%m%d_%H%M%S)_$(basename "${BAG_PATH}" .bag)}"
@@ -33,6 +33,7 @@ esac
 
 mkdir -p "${RESULT_DIR}"
 
+export WORKSPACE_ROOT
 export RUN_NAME
 export PLAY_RATE
 export BAG_PATH="/workspace/${BAG_PATH#${WORKSPACE_ROOT}/}"

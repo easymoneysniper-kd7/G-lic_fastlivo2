@@ -4,7 +4,7 @@ services:
     working_dir: /workspace
     ipc: host
     volumes:
-      - /home/cw/project/yjh_workspace:/workspace
+      - ${WORKSPACE_ROOT:-/home/cw/project/yjh_workspace/Gaussian-lic}:/workspace
     command:
       - bash
       - -lc
@@ -22,7 +22,7 @@ services:
     ipc: host
     network_mode: service:roscore
     volumes:
-      - /home/cw/project/yjh_workspace:/workspace
+      - ${WORKSPACE_ROOT:-/home/cw/project/yjh_workspace/Gaussian-lic}:/workspace
     command:
       - bash
       - -lc
@@ -34,8 +34,8 @@ services:
         exec roslaunch fast_livo mapping_avia.launch \
           rviz:=false \
           republish_compressed:=false \
-          avia_config:=${FRONTEND_AVIA_CONFIG:-/workspace/.fastlivo2_frontend_ws/src/fast_livo/config/avia.yaml} \
-          camera_config:=${FRONTEND_CAMERA_CONFIG:-/workspace/.fastlivo2_frontend_ws/src/fast_livo/config/camera_pinhole.yaml}
+          avia_config:=${FRONTEND_AVIA_CONFIG:-/workspace/.fastlivo2_frontend_ws/src/FAST-LIVO2/config/avia.yaml} \
+          camera_config:=${FRONTEND_CAMERA_CONFIG:-/workspace/.fastlivo2_frontend_ws/src/FAST-LIVO2/config/camera_pinhole.yaml}
 
   bridge:
     image: gaussian-lic:cuda128
@@ -45,7 +45,7 @@ services:
     ipc: host
     network_mode: service:roscore
     volumes:
-      - /home/cw/project/yjh_workspace:/workspace
+      - ${WORKSPACE_ROOT:-/home/cw/project/yjh_workspace/Gaussian-lic}:/workspace
     command:
       - bash
       - -lc
@@ -66,7 +66,7 @@ services:
     network_mode: service:roscore
     gpus: all
     volumes:
-      - /home/cw/project/yjh_workspace:/workspace
+      - ${WORKSPACE_ROOT:-/home/cw/project/yjh_workspace/Gaussian-lic}:/workspace
     command:
       - bash
       - -lc
@@ -88,7 +88,7 @@ services:
     ipc: host
     network_mode: service:roscore
     volumes:
-      - /home/cw/project/yjh_workspace:/workspace
+      - ${WORKSPACE_ROOT:-/home/cw/project/yjh_workspace/Gaussian-lic}:/workspace
     command:
       - bash
       - -lc

@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 IMAGE_NAME=${IMAGE_NAME:-gaussian-lic:cuda128}
 CONTAINER_NAME=${CONTAINER_NAME:-gaussian-lic}
-HOST_RESULT_DIR=${HOST_RESULT_DIR:-/home/cw/project/yjh_workspace/G-lic/result}
+HOST_RESULT_DIR=${HOST_RESULT_DIR:-${REPO_ROOT}/result}
 HOST_DATA_ROOT=${HOST_DATA_ROOT:-}
 HOST_UID=${HOST_UID:-$(id -u)}
 HOST_GID=${HOST_GID:-$(id -g)}

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 IMAGE_NAME=${IMAGE_NAME:-gaussian-lic:cuda128}
 CONTAINER_NAME=${CONTAINER_NAME:-gaussian-lic-test}
-RESULT_ROOT_DIR=${RESULT_ROOT_DIR:-/home/cw/project/yjh_workspace/G-lic/result}
-HOST_CKPT_DIR=${HOST_CKPT_DIR:-/home/cw/project/yjh_workspace/G-lic/ckpt}
+RESULT_ROOT_DIR=${RESULT_ROOT_DIR:-${REPO_ROOT}/result}
+HOST_CKPT_DIR=${HOST_CKPT_DIR:-${REPO_ROOT}/ckpt}
 BAG_PATH=${BAG_PATH:-${1:-}}
 ROS_SETUP=${ROS_SETUP:-/opt/ros/noetic/setup.bash}
 HOST_UID=${HOST_UID:-$(id -u)}

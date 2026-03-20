@@ -15,22 +15,22 @@ Key choices:
 Build the image:
 
 ```bash
-cd /home/cw/project/yjh_workspace/G-lic
+cd /home/cw/project/yjh_workspace/Gaussian-lic/G-lic
 ./docker/build.sh
 ```
 
 Run the FAST-LIVO2 frontend + bridge + Gaussian-LIC backend with one command:
 
 ```bash
-cd /home/cw/project/yjh_workspace/G-lic
+cd /home/cw/project/yjh_workspace/Gaussian-lic/G-lic
 ./docker/run_fastlivo2_compose.sh
 ```
 
-The default bag is `/home/cw/project/yjh_workspace/data/CBD_Building_01.bag`.
+The default bag is `/home/cw/project/yjh_workspace/Gaussian-lic/G-lic/data/fast-livo2_datasets/CBD_Building_01.bag`.
 You can override it with:
 
 ```bash
-BAG_PATH=/home/cw/project/yjh_workspace/data/CBD_Building_01.bag ./docker/run_fastlivo2_compose.sh
+BAG_PATH=/home/cw/project/yjh_workspace/Gaussian-lic/G-lic/data/fast-livo2_datasets/CBD_Building_01.bag ./docker/run_fastlivo2_compose.sh
 ```
 
 The script uses `docker compose`, saves per-service logs into the per-run result
@@ -40,7 +40,7 @@ down after the run finishes.
 Run an interactive container:
 
 ```bash
-cd /home/cw/project/yjh_workspace/G-lic
+cd /home/cw/project/yjh_workspace/Gaussian-lic/G-lic
 ./docker/run.sh
 ```
 
@@ -71,7 +71,7 @@ docker load -i gaussian-lic-cuda128.tar
 Manage per-run result folders on the host:
 
 ```bash
-cd /home/cw/project/yjh_workspace/G-lic
+cd /home/cw/project/yjh_workspace/Gaussian-lic/G-lic
 ./docker/resultctl.sh list
 ./docker/resultctl.sh rename 20260318_132450_CBD_Building_01 cbd_depth_on
 ./docker/resultctl.sh delete cbd_depth_on
